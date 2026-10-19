@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="my">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>PHOEHTWE 2D</title>
+<style>
+:root{--primary:#075e54;--bg:#f3f6f8;--card:#fff;--text:#17212b}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Myanmar",sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#064e3b,#0f766e);color:#fff;padding:20px 16px 16px;position:sticky;top:0;z-index:3;box-shadow:0 2px 8px #0002}
+header h1{font-size:22px;margin:0 0 5px}header p{font-size:12px;margin:0;opacity:.85}
+.nav{display:flex;gap:7px;overflow:auto;padding:10px;background:#fff;position:sticky;top:83px;z-index:2;border-bottom:1px solid #dce4e8}
+.nav button{white-space:nowrap;border:0;border-radius:20px;padding:9px 13px;background:#e7efee;color:#154b45;font-weight:700}
+.nav button.active{background:var(--primary);color:#fff}
+main{padding:12px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+button, .filelabel{cursor:pointer}.action{border:0;border-radius:9px;padding:10px 12px;background:var(--primary);color:white;font-weight:700}.secondary{background:#e2e8f0;color:#1e293b}
+.note{font-size:12px;color:#52616b;margin:6px 2px 12px}
+.wrap{overflow:auto;background:#fff;border-radius:12px;box-shadow:0 1px 5px #0001;max-height:65vh}
+table{border-collapse:collapse;min-width:100%;font-size:13px}td,th{border:1px solid #e2e8f0;padding:8px;min-width:100px;max-width:230px;overflow-wrap:anywhere}
+th{background:#eaf3f2;position:sticky;top:0;text-align:left;z-index:1}td[contenteditable=true]{background:#fffef5;outline:none}td[contenteditable=true]:focus{box-shadow:inset 0 0 0 2px #0f766e}
+.empty{padding:24px;text-align:center;color:#64748b}
+footer{font-size:11px;text-align:center;padding:18px;color:#64748b}
+@media(max-width:600px){td,th{min-width:115px;padding:7px;font-size:12px}.nav{top:83px}}
+</style>
+</head>
+<body>
+<header><h1>PHOEHTWE 2D</h1><p>ချေးငွေ • နေ့စဉ်စာရင်း • CashBack • ကော်မရှင်</p></header>
+<div class="nav" id="nav"></div>
+<main>
+ <div class="toolbar">
+  <button class="action" id="addRow">＋ အတန်းအသစ်</button>
+  <button class="action secondary" id="exportBtn">စာရင်း JSON ထုတ်ရန်</button>
+  <label class="filelabel action secondary" for="importFile">JSON ပြန်ထည့်ရန်</label><input id="importFile" type="file" accept=".json,application/json" hidden>
+  <button class="action secondary" id="resetBtn">မူလစာရင်းပြန်ယူရန်</button>
+ </div>
+ <div class="note">အဝါနုရောင်ဆဲလ်များကို နှိပ်ပြီး တိုက်ရိုက်ပြင်နိုင်သည်။ ပြင်ဆင်ချက်များကို ဤဖုန်းထဲတွင် အလိုအလျောက်သိမ်းထားမည်။</div>
+ <div id="content"></div>
+</main>
+<footer>PHOEHTWE 2D • Offline local app</footer>
+<script>
+const STORE='phoehtwe2d_workbook_v1'; let original=[], data=[], current=0;
+const nav=document.getElementById('nav'), content=document.getElementById('content');
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function init(){fetch('workbook.json').then(r=>r.json()).then(d=>{original=d; const saved=localStorage.getItem(STORE); data=saved?JSON.parse(saved):clone(original); renderNav(); renderSheet(0)}).catch(()=>{content.innerHTML='<div class="empty">စာရင်းဖိုင်ကို ဖွင့်မရပါ။</div>'})}
+function save(){localStorage.setItem(STORE,JSON.stringify(data))}
+function renderNav(){nav.innerHTML='';data.forEach((s,i)=>{let b=document.createElement('button');b.textContent=s.name;b.className=i===current?'active':'';b.onclick=()=>{current=i;renderNav();renderSheet(i)};nav.appendChild(b)})}
+function renderSheet(i){current=i;const sheet=data[i];content.innerHTML='';let wrap=document.createElement('div');wrap.className='wrap';let table=document.createElement('table');
+let max=Math.max(1,...sheet.rows.map(r=>r.length));
+sheet.rows.forEach((row,ri)=>{let tr=document.createElement('tr');for(let ci=0;ci<max;ci++){let cell=document.createElement(ri===0?'th':'td');let val=row[ci]??'';cell.textContent=val; if(ri>0){cell.contentEditable='true';cell.spellcheck=false;cell.addEventListener('blur',()=>{sheet.rows[ri][ci]=cell.textContent;save()});cell.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();cell.blur()}})}tr.appendChild(cell)}table.appendChild(tr)});wrap.appendChild(table);content.appendChild(wrap);renderNav()}
+document.getElementById('addRow').onclick=()=>{let s=data[current], max=Math.max(1,...s.rows.map(r=>r.length));s.rows.push(Array(max).fill(''));save();renderSheet(current);};
+document.getElementById('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='PHOEHTWE_2D_backup.json';a.click();URL.revokeObjectURL(a.href)};
+document.getElementById('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(!Array.isArray(d))throw Error();data=d;save();current=0;renderNav();renderSheet(0);alert('စာရင်းပြန်ထည့်ပြီးပါပြီ။')}catch(err){alert('JSON ဖိုင်မမှန်ပါ။')}};r.readAsText(f);e.target.value=''};
+document.getElementById('resetBtn').onclick=()=>{if(confirm('ပြင်ထားသောစာရင်းအားလုံးကို ဖျက်ပြီး မူလစာရင်းပြန်ယူမလား?')){data=clone(original);save();current=0;renderNav();renderSheet(0)}};
+init();
+</script>
+</body></html>
